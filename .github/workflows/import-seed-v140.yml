@@ -1,0 +1,60 @@
+name: Import VVChain v1.0.140 Clean Seed
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/import-seed-v140.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SEED_URL: "https://sdmntprkoreacentral.oaiusercontent.com/files/00000000-b610-8206-af8c-300d3c4adeb7/raw?se=2026-10-01T18%3A53%3A39Z&sp=r&sv=2026-02-06&sr=b&scid=835fb567-f825-5964-993a-4ceb35896d5f&skoid=1e4bb9ed-6bb5-424a-a3aa-79f21566e722&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-01T18%3A24%3A52Z&ske=2026-10-02T18%3A24%3A52Z&sks=b&skv=2026-02-06&sig=FjcLu9ewTD9uWD30OTS3a7uxyrHhGie%2Bkj1f50wuFzs%3D"
+    steps:
+      - name: Checkout public repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Import verified source-free v1.0.140 seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/vv-artifact /tmp/vv-seed
+          mkdir -p /tmp/vv-artifact /tmp/vv-seed
+          curl -fsSL "$SEED_URL" -o /tmp/vv-artifact.zip
+          unzip -q /tmp/vv-artifact.zip -d /tmp/vv-artifact
+          inner="$(find /tmp/vv-artifact -maxdepth 2 -type f -name 'VVChain-Public-clean-seed.zip' | head -n1)"
+          test -n "$inner"
+          unzip -q "$inner" -d /tmp/vv-seed
+
+          test "$(cat /tmp/vv-seed/VERSION.txt)" = "1.0.140"
+          test -s /tmp/vv-seed/index.html
+          test -s /tmp/vv-seed/README.md
+          test -s /tmp/vv-seed/assets/VVChain_UI_D.png
+          test -s /tmp/vv-seed/downloads/VVChain-v1.0.140-Windows-VST3.zip
+          test ! -e /tmp/vv-seed/Source
+          test ! -e /tmp/vv-seed/Tests
+          test ! -e /tmp/vv-seed/docs
+          test ! -e /tmp/vv-seed/vvchain-worklet.js
+
+          rm -rf assets downloads
+          cp /tmp/vv-seed/index.html ./index.html
+          cp /tmp/vv-seed/README.md ./README.md
+          cp /tmp/vv-seed/VERSION.txt ./VERSION.txt
+          cp -a /tmp/vv-seed/assets ./assets
+          cp -a /tmp/vv-seed/downloads ./downloads
+
+          rm -f .github/workflows/import-seed-v140.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -m "[v1.0.140] deploy clean public distribution"
+          git push
