@@ -8,4 +8,4 @@ Public distribution repository for VVChain.
 - No DSP source
 - No development history
 
-Current public build: v1.0.130
+Current public build: v1.0.140
